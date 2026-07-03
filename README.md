@@ -1,3 +1,3 @@
-# Maris
+# Wave
 
-Maritime Ad-hoc Resilient IoT Security
+Wireless Ad-hoc Vessel Environment.
