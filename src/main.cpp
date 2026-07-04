@@ -1,9 +1,11 @@
 #include <Arduino.h>
-#include <ios>
 #include <iot_board.h>
+#include <menu.h>
 #include <state.h>
 
-BoatState state;
+void onBtn1Released(uint8_t pinBtn) { menuNext(); }
+
+void onBtn2Released(uint8_t pinBtn) { menuSelect(); }
 
 void setup() {
 
@@ -13,44 +15,33 @@ void setup() {
   Wire.begin();
   IoTBoard::init_spi();
 
-  display->clearDisplay();
-  display->println("Setup OK");
-  display->display();
-  state = BoatState::Idle;
+  if (!IoTBoard::init_lora()) {
+    display->clearDisplay();
+    display->println("LoRa FAILED");
+    display->display();
+    while (1)
+      ;
+  }
+  initState();
+  if (state != BoatState::Idle) {
+    display->clearDisplay();
+    display->println("state FAILED");
+    display->display();
+    while (1)
+      ;
+  }
+
+  initMenu();
+
+  buttons->onBtn1Release(onBtn1Released);
+  buttons->onBtn2Release(onBtn2Released);
+
+  drawMenu();
 }
 
 void loop() {
-
-  switch (state) {
-
-  case BoatState::Idle:
-    display->setCursor(0, 0);
-    display->clearDisplay();
-    display->println("State:Idle");
-    display->display();
-    delay(1000);
-    state = BoatState::Armed;
-    break;
-
-  case BoatState::Armed:
-
-    display->clearDisplay();
-    display->println("State:Armed");
-    display->display();
-    delay(1000);
-    state = BoatState::Alarm;
-
-  case BoatState::Alarm:
-    display->clearDisplay();
-    display->println("State:Alarm");
-    display->display();
-    delay(1000);
-    state = BoatState::Idle;
-    break;
-
-  default:
-    Serial.println("no valid state");
-
-    break;
-  }
+  // Aggiorna i pulsanti
+  buttons->update();
+  // Aggiorna la macchina a stati
+  updateState();
 }
