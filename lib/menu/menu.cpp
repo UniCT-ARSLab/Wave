@@ -21,6 +21,8 @@ void drawMenu() {
   // Riga superiore: stato + ID
   display->print("State: ");
   display->println(stateToString(state));
+  display->print("Node: ");
+  display->println(NODE);
 
   display->println("----------------");
 

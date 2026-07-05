@@ -1,7 +1,7 @@
 #pragma once
 #include <cstdint>
 
-const uint8_t NODE_ID = 1;
+#define NODE 3
 
 typedef enum { Idle, Armed, Alarm } BoatState;
 
@@ -10,3 +10,4 @@ void updateState();
 const char *stateToString(BoatState s);
 
 extern BoatState state;
+

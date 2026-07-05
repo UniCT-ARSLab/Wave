@@ -14,7 +14,7 @@ struct SeenPacket {
 static SeenPacket cache[CACHE_SIZE];
 static uint8_t cacheIndex = 0;
 
-static uint32_t deviceId = 1;
+static uint32_t deviceId = NODE;
 static uint16_t seqCounter = 0;
 
 MeshPacket relayPacket;
