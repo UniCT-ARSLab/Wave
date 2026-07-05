@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <iot_board.h>
+#include <lora.h>
 #include <menu.h>
 #include <state.h>
 
@@ -12,6 +13,7 @@ void setup() {
   IoTBoard::init_display();
   IoTBoard::init_serial(115200);
   IoTBoard::init_buttons();
+  IoTBoard::init_leds();
   Wire.begin();
   IoTBoard::init_spi();
 
@@ -22,6 +24,7 @@ void setup() {
     while (1)
       ;
   }
+  initLoRaNetwork();
   initState();
   if (state != BoatState::Idle) {
     display->clearDisplay();
@@ -40,8 +43,6 @@ void setup() {
 }
 
 void loop() {
-  // Aggiorna i pulsanti
   buttons->update();
-  // Aggiorna la macchina a stati
   updateState();
 }
