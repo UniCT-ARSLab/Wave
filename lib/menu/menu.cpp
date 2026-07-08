@@ -1,7 +1,9 @@
-#include <iot_board.h>
-
 #include "menu.h"
 #include "state.h"
+#include <iot_board.h>
+#include <lora.h>
+
+int counter = 0;
 
 const char *menuItems[] = {"Idle", "Armed", "Alarm"};
 
@@ -23,6 +25,9 @@ void drawMenu() {
   display->println(stateToString(state));
   display->print("Node: ");
   display->println(NODE);
+
+  display->print("counter:");
+  display->println(counter);
 
   display->println("----------------");
 

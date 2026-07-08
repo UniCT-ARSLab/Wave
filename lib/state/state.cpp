@@ -3,6 +3,7 @@
 #include <state.h>
 
 BoatState state;
+extern int counter;
 
 const char *stateToString(BoatState s) {
   switch (s) {
@@ -30,6 +31,7 @@ void updateState() {
     digitalWrite(LED_YELLOW, LOW);
     digitalWrite(LED_GREEN, LOW);
     digitalWrite(LED_RED, LOW);
+    counter = 0;
 
     break;
 

@@ -2,9 +2,12 @@
 #include <cstdint>
 #include <iot_board.h>
 #include <lora.h>
+#include <mesh_packet.h>
 #include <state.h>
 
-#define CACHE_SIZE 10
+#define CACHE_SIZE 32
+
+extern int counter;
 
 struct SeenPacket {
   uint32_t deviceId;
@@ -19,16 +22,20 @@ static uint16_t seqCounter = 0;
 
 MeshPacket relayPacket;
 volatile bool shouldRelay = false;
+uint32_t relayTime = 0;
 
 void initLoRaNetwork() {
+
   lora->onReceive(onLoRaReceive);
   lora->receive();
+
+  randomSeed(micros());
 }
 
 void sendPacket(const MeshPacket &packet) {
 
   digitalWrite(LED_YELLOW, LOW);
-  delay(250);
+
   const uint8_t *raw = (const uint8_t *)&packet;
 
   lora->beginPacket();
@@ -37,74 +44,81 @@ void sendPacket(const MeshPacket &packet) {
     lora->write(raw[i]);
 
   lora->endPacket();
+
   lora->receive();
 
   digitalWrite(LED_YELLOW, HIGH);
 }
 
-bool alreadySeen(uint32_t id, uint16_t seq) {
-  for (int i = 0; i < CACHE_SIZE; i++) {
-    if (cache[i].deviceId == id && cache[i].seq == seq)
-      return true;
-  }
+bool isSeen(uint32_t id, uint16_t seq) {
 
-  cache[cacheIndex] = {id, seq};
-  cacheIndex = (cacheIndex + 1) % CACHE_SIZE;
+  for (int i = 0; i < CACHE_SIZE; i++) {
+
+    if (cache[i].deviceId == id && cache[i].seq == seq) {
+
+      return true;
+    }
+  }
 
   return false;
 }
 
+void addSeen(uint32_t id, uint16_t seq) {
+
+  cache[cacheIndex].deviceId = id;
+  cache[cacheIndex].seq = seq;
+
+  cacheIndex = (cacheIndex + 1) % CACHE_SIZE;
+}
+
+void cancelForward(const MeshPacket &p) {
+
+  if (!shouldRelay)
+    return;
+
+  if (relayPacket.originId == p.originId && relayPacket.seq == p.seq) {
+
+    shouldRelay = false;
+
+    Serial.println("Forward cancelled");
+  }
+}
+
 void sendAlert() {
+
   MeshPacket p = {};
 
   p.deviceId = deviceId;
-  p.seq = seqCounter++;
-  p.ttl = 8; // hop iniziale
 
-  // payload dummy (poi AES-CTR)
+  p.originId = deviceId;
+
+  p.seq = seqCounter++;
+
+  p.ttl = DEFAULT_TTL;
+
   const char *msg = "ALERT";
+
   memcpy(p.payload, msg, strlen(msg));
 
-  // CRC placeholder (lo implementerai dopo)
   p.crc = 0xFFFF;
+
+  addSeen(p.originId, p.seq);
 
   sendPacket(p);
 }
 
-static void processPacket(const MeshPacket &p) {
-  if (p.deviceId == deviceId)
-    return;
-
-  if (alreadySeen(p.deviceId, p.seq))
-    return;
-
-  if (p.ttl == 0)
-    return;
-
-  switch (state) {
-  case BoatState::Idle:
-  case BoatState::Armed: {
-    MeshPacket out = p;
-    out.ttl--;
-
-    sendPacket(out);
-    break;
-  }
-
-  case BoatState::Alarm:
-    break;
-  }
-}
-
 void onLoRaReceive(int packetSize) {
+
   digitalWrite(LED_GREEN, LOW);
-  digitalWrite(LED_RED, LOW);
+
   if (packetSize != MESH_PACKET_SIZE) {
+
     digitalWrite(LED_RED, HIGH);
+
     lora->receive();
+
     return;
   }
-  digitalWrite(LED_GREEN, HIGH);
 
   MeshPacket p;
 
@@ -115,6 +129,9 @@ void onLoRaReceive(int packetSize) {
 
   Serial.println("----- LORA PACKET RECEIVED -----");
 
+  Serial.print("OriginId: ");
+  Serial.println(p.originId);
+
   Serial.print("DeviceId: ");
   Serial.println(p.deviceId);
 
@@ -124,34 +141,55 @@ void onLoRaReceive(int packetSize) {
   Serial.print("TTL: ");
   Serial.println(p.ttl);
 
-  Serial.print("Payload: ");
-  for (int i = 0; i < 16; i++) {
-    if (p.payload[i] == 0)
-      break;
-    Serial.print((char)p.payload[i]);
-  }
-
-  Serial.println();
   Serial.println("--------------------------------");
 
+  if (isSeen(p.originId, p.seq)) {
+    cancelForward(p);
+
+    lora->receive();
+
+    digitalWrite(LED_GREEN, HIGH);
+
+    return;
+  }
+
   relayPacket = p;
+
+  relayTime = millis() + random(50, 150);
+
   shouldRelay = true;
+
+  digitalWrite(LED_GREEN, HIGH);
+
+  counter++;
 
   lora->receive();
 }
 
 void handleLoRaRelay() {
+
   if (!shouldRelay)
+    return;
+
+  if (millis() < relayTime)
     return;
 
   shouldRelay = false;
 
-  if (state != BoatState::Alarm) {
-    if (relayPacket.ttl > 0) {
-      MeshPacket out = relayPacket;
-      out.ttl--;
+  if (relayPacket.ttl == 0)
+    return;
 
-      sendPacket(out);
-    }
+  if (isSeen(relayPacket.originId, relayPacket.seq)) {
+    return;
   }
+
+  MeshPacket out = relayPacket;
+
+  out.ttl--;
+
+  out.deviceId = deviceId;
+
+  addSeen(out.originId, out.seq);
+
+  sendPacket(out);
 }

@@ -2,14 +2,20 @@
 
 #include <mesh_packet.h>
 
+extern int counter;
+
 void initLoRaNetwork();
 
-void handleLoRaRelay();
-
-void onLoRaReceive(int packetSize);
+void sendPacket(const MeshPacket &packet);
 
 void sendAlert();
 
-static void processPacket(const MeshPacket &packet);
+void onLoRaReceive(int packetSize);
 
-void sendPacket(const MeshPacket &packet);
+void handleLoRaRelay();
+
+bool isSeen(uint32_t id, uint16_t seq);
+
+void addSeen(uint32_t id, uint16_t seq);
+
+void cancelForward(const MeshPacket &packet);
