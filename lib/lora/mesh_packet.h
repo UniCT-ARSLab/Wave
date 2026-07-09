@@ -5,16 +5,23 @@
 
 constexpr uint8_t DEFAULT_TTL = 8;
 
+#pragma pack(push, 1)
+
 struct MeshPacket {
-  uint32_t originId; // 4 bytes
-  uint32_t deviceId; // 4 bytes
-  uint16_t seq;      // 2 bytes
-  uint8_t ttl;       // 1 byte
-  uint8_t nonce[8];  // 8 bytes
 
-  uint8_t payload[16]; // encrypted lat/lon
+  uint32_t originId;
 
-  uint16_t crc; // 2 bytes
+  uint32_t deviceId;
+
+  uint32_t seq;
+
+  uint8_t ttl;
+
+  uint8_t payload[8];
+
+  uint8_t tag[12];
 };
+
+#pragma pack(pop)
 
 constexpr uint8_t MESH_PACKET_SIZE = sizeof(MeshPacket);

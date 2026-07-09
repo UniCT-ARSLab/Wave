@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <crypto.h>
 #include <cstdint>
 #include <iot_board.h>
 #include <lora.h>
@@ -96,11 +97,23 @@ void sendAlert() {
 
   p.ttl = DEFAULT_TTL;
 
-  const char *msg = "ALERT";
+  uint8_t test_payload[8] = {10, 20, 30, 40, 50, 60, 70, 80};
 
-  memcpy(p.payload, msg, strlen(msg));
+  bool ret = aesGcmEncrypt(test_key, p.originId, p.seq, p.ttl,
+                           test_payload,         // Cosa voglio cifrare
+                           sizeof(test_payload), // Quanti byte (8)
+                           p.payload,            // DOVE scrivere il Ciphertext
+                           p.tag                 // DOVE scrivere il Tag
+  );
 
-  p.crc = 0xFFFF;
+  // memcpy(p.payload, test_payload, sizeof(test_payload));
+
+  if (ret) {
+    Serial.println("CRYPTO OK");
+
+  } else {
+    Serial.println("ERROR CRYPTO");
+  }
 
   addSeen(p.originId, p.seq);
 
@@ -140,6 +153,45 @@ void onLoRaReceive(int packetSize) {
 
   Serial.print("TTL: ");
   Serial.println(p.ttl);
+
+  // Stampa il payload (assumendo sia lungo 8 byte, o usa sizeof(p.payload))
+  Serial.print("Payload (HEX): ");
+  for (int i = 0; i < sizeof(p.payload); i++) {
+    if (p.payload[i] < 0x10)
+      Serial.print("0"); // Aggiunge lo zero iniziale per numeri < 16
+    Serial.print(p.payload[i], HEX);
+    Serial.print(" ");
+  }
+  Serial.println();
+
+  // Stampa il tag (assumendo sia lungo 12 byte, o usa sizeof(p.tag))
+  Serial.print("Tag (HEX): ");
+  for (int i = 0; i < sizeof(p.tag); i++) {
+    if (p.tag[i] < 0x10)
+      Serial.print("0");
+    Serial.print(p.tag[i], HEX);
+    Serial.print(" ");
+  }
+  Serial.println();
+
+  uint8_t plain[8];
+  int ret = aesGcmDecrypt(test_key,
+
+                          p.originId, p.seq, p.ttl,
+
+                          p.payload, sizeof(p.payload),
+
+                          p.tag,
+
+                          plain);
+  if (ret) {
+    Serial.print("Decrypted payload: ");
+    for (int i = 0; i < sizeof(plain); i++) {
+      Serial.print(plain[i]);
+      Serial.print(" ");
+    }
+    Serial.println();
+  }
 
   Serial.println("--------------------------------");
 
