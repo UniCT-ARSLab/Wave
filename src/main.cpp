@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <autoencoder_data.h>
 #include <iot_board.h>
 #include <lora.h>
 #include <menu.h>
@@ -33,6 +34,8 @@ void setup() {
     while (1)
       ;
   }
+
+  init_autoencoder();
 
   initMenu();
 
