@@ -1,3 +1,4 @@
+#include <autoencoder_data.h>
 #include <iot_board.h>
 #include <lora.h>
 #include <state.h>
@@ -37,6 +38,9 @@ void updateState() {
 
   case BoatState::Armed:
     handleLoRaRelay();
+    if (is_there_anomaly()) {
+      state = BoatState::Alarm;
+    }
     break;
 
   case BoatState::Alarm:
