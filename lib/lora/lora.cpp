@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <complex>
 #include <crypto.h>
 #include <cstdint>
 #include <iot_board.h>
@@ -14,6 +15,62 @@ struct SeenPacket {
   uint32_t deviceId;
   uint16_t seq;
 };
+
+#define DEBUG 1
+
+#ifdef DEBUG
+struct PacketMetric {
+  uint32_t originId;
+  uint16_t seq;
+
+  uint32_t firstRxTime;
+  uint32_t lastRxTime;
+
+  uint8_t rxCount;
+  uint8_t forwardCount;
+
+  int firstRSSI;
+  float firstSNR;
+};
+
+static PacketMetric metrics[CACHE_SIZE];
+static uint8_t metricIndex = 0;
+
+bool updateMetricDuplicate(uint32_t id, uint16_t seq, uint32_t now) {
+
+  for (int i = 0; i < CACHE_SIZE; i++) {
+
+    if (metrics[i].originId == id && metrics[i].seq == seq) {
+
+      metrics[i].lastRxTime = now;
+      metrics[i].rxCount++;
+
+      return true;
+    }
+  }
+
+  return false;
+}
+
+void saveFirstReception(uint32_t id, uint16_t seq, uint32_t time, int rssi,
+                        float snr) {
+
+  metrics[metricIndex].originId = id;
+  metrics[metricIndex].seq = seq;
+
+  metrics[metricIndex].firstRxTime = time;
+  metrics[metricIndex].lastRxTime = time;
+
+  metrics[metricIndex].rxCount = 1;
+
+  metrics[metricIndex].firstRSSI = rssi;
+  metrics[metricIndex].firstSNR = snr;
+
+  metricIndex++;
+
+  metricIndex %= CACHE_SIZE;
+}
+#endif
 
 static SeenPacket cache[CACHE_SIZE];
 static uint8_t cacheIndex = 0;
@@ -39,12 +96,22 @@ void sendPacket(const MeshPacket &packet) {
 
   const uint8_t *raw = (const uint8_t *)&packet;
 
+#ifdef DEBUG
+  uint32_t txStart = micros();
+#endif
   lora->beginPacket();
 
   for (int i = 0; i < MESH_PACKET_SIZE; i++)
     lora->write(raw[i]);
 
   lora->endPacket();
+
+#ifdef DEBUG
+  uint32_t txEnd = micros();
+  uint32_t airtime = txEnd - txStart;
+  Serial.print("Airtime");
+  Serial.println(airtime);
+#endif
 
   lora->receive();
 
@@ -124,6 +191,10 @@ void onLoRaReceive(int packetSize) {
 
   digitalWrite(LED_GREEN, LOW);
 
+#ifdef DEBUG
+  uint32_t rxTimestamp = micros();
+#endif
+
   if (packetSize != MESH_PACKET_SIZE) {
 
     digitalWrite(LED_RED, HIGH);
@@ -140,6 +211,11 @@ void onLoRaReceive(int packetSize) {
   for (int i = 0; i < MESH_PACKET_SIZE; i++)
     raw[i] = lora->read();
 
+#ifdef DEBUG
+  int rssi = lora->packetRssi();
+  float snr = lora->packetSnr();
+#endif
+
   Serial.println("----- LORA PACKET RECEIVED -----");
 
   Serial.print("OriginId: ");
@@ -153,6 +229,17 @@ void onLoRaReceive(int packetSize) {
 
   Serial.print("TTL: ");
   Serial.println(p.ttl);
+
+#ifdef DEBUG
+  Serial.print("RSSI: ");
+  Serial.println(rssi);
+
+  Serial.print("SNR: ");
+  Serial.println(snr);
+#endif
+
+  Serial.print("Hop: ");
+  Serial.println(DEFAULT_TTL + 1 - p.ttl);
 
   // Stampa il payload (assumendo sia lungo 8 byte, o usa sizeof(p.payload))
   Serial.print("Payload (HEX): ");
@@ -195,6 +282,18 @@ void onLoRaReceive(int packetSize) {
 
   Serial.println("--------------------------------");
 
+#ifdef DEBUG
+  if (updateMetricDuplicate(p.originId, p.seq, rxTimestamp)) {
+    cancelForward(p);
+
+    lora->receive();
+
+    digitalWrite(LED_GREEN, HIGH);
+
+    return;
+  }
+#endif
+#ifndef DEBUG
   if (isSeen(p.originId, p.seq)) {
     cancelForward(p);
 
@@ -204,11 +303,18 @@ void onLoRaReceive(int packetSize) {
 
     return;
   }
+#endif
 
   relayPacket = p;
 
+#ifdef DEBUG
+  saveFirstReception(p.originId, p.seq, rxTimestamp, rssi, snr);
+#endif
   relayTime = millis() + random(50, 150);
-
+#ifdef DEBUG
+  Serial.print("RelayTime");
+  Serial.println(relayTime);
+#endif
   shouldRelay = true;
 
   digitalWrite(LED_GREEN, HIGH);
