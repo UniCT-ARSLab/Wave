@@ -109,8 +109,9 @@ void sendPacket(const MeshPacket &packet) {
 #ifdef DEBUG
   uint32_t txEnd = micros();
   uint32_t airtime = txEnd - txStart;
-  Serial.print("Airtime");
-  Serial.println(airtime);
+  Serial.print("Airtime: ");
+  Serial.print(airtime / 1000.0);
+  Serial.println("ms");
 #endif
 
   lora->receive();
@@ -232,10 +233,11 @@ void onLoRaReceive(int packetSize) {
 
 #ifdef DEBUG
   Serial.print("RSSI: ");
-  Serial.println(rssi);
-
+  Serial.print(rssi);
+  Serial.println(" dBm");
   Serial.print("SNR: ");
-  Serial.println(snr);
+  Serial.print(snr);
+  Serial.println(" dB");
 #endif
 
   Serial.print("Hop: ");
@@ -312,8 +314,9 @@ void onLoRaReceive(int packetSize) {
 #endif
   relayTime = millis() + random(50, 150);
 #ifdef DEBUG
-  Serial.print("RelayTime");
-  Serial.println(relayTime);
+  Serial.print("RelayTime: ");
+  Serial.print(relayTime);
+  Serial.println(" ms");
 #endif
   shouldRelay = true;
 
