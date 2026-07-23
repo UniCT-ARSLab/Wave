@@ -185,6 +185,8 @@ void sendAlert() {
 
   addSeen(p.originId, p.seq);
 
+  ret = aesCtrEncryptPacket(p);
+
   sendPacket(p);
 }
 
@@ -211,6 +213,19 @@ void onLoRaReceive(int packetSize) {
 
   for (int i = 0; i < MESH_PACKET_SIZE; i++)
     raw[i] = lora->read();
+
+  if (!aesCtrDecryptPacket(p)) {
+
+    Serial.println("CTR DECRYPT FAILED");
+
+    digitalWrite(LED_RED, HIGH);
+
+    lora->receive();
+
+    return;
+  }
+
+  Serial.println("CTR DECRYPT OK");
 
 #ifdef DEBUG
   int rssi = lora->packetRssi();
