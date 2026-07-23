@@ -2,6 +2,7 @@
 #include <cstdint>
 
 #define NODE 1
+// #define DATA 1
 
 typedef enum { Idle, Armed, Alarm } BoatState;
 
@@ -10,4 +11,3 @@ void updateState();
 const char *stateToString(BoatState s);
 
 extern BoatState state;
-

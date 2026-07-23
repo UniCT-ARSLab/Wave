@@ -37,19 +37,31 @@ void updateState() {
     break;
 
   case BoatState::Armed:
+#ifndef DATA
     handleLoRaRelay();
     if (is_there_anomaly()) {
       state = BoatState::Alarm;
     }
+#endif
+#ifdef DATA
+    print_data();
+#endif
     break;
 
   case BoatState::Alarm:
+
+#ifndef DATA
     static uint32_t lastSend = 0;
 
     if (millis() - lastSend > 2500) {
       sendAlert();
       lastSend = millis();
     }
+#endif
+
+#ifdef DATA
+    print_data();
+#endif
 
     break;
   }
