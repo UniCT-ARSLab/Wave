@@ -6,6 +6,10 @@
 #include <iot_board.h>
 #include <math.h>
 
+bool checking;
+uint32_t anomaly_counter = 0;
+int checking_counter = WINDOW_SIZE;
+
 Eloquent::TinyML::TfLite<TF_NUM_INPUTS, TF_NUM_OUTPUTS, TENSOR_ARENA_SIZE> ml;
 float input_buffer[TF_NUM_INPUTS] = {0};
 float output_buffer[TF_NUM_OUTPUTS] = {0};
@@ -100,7 +104,7 @@ void calibrateGyro() {
   display->display();
 
   long sum_x = 0, sum_z = 0;
-  for (int i = 0; i < 1000; i++) {
+  for (int i = 0; i < 100; i++) {
     sum_x += readGiroData(0x22);
     sum_z += readGiroData(0x26);
     delay(10);
@@ -150,7 +154,7 @@ void init_autoencoder() {
   calibrateGyro();
 }
 
-bool is_there_anomaly() {
+bool is_there_anomaly(bool calibration) {
   if (runEvery(200)) {
     display->clearDisplay();
 
@@ -190,12 +194,47 @@ bool is_there_anomaly() {
         dinamic_threshold = ANOMALY_THRESHOLD;
       }
 
-      if (mse > dinamic_threshold) {
-        return true;
+      if (mse > dinamic_threshold && checking == false) {
+        checking_counter = WINDOW_SIZE;
+        anomaly_counter = 0;
+        checking = true;
+        anomaly_counter++;
+      }
+
+      if (checking && checking_counter > 0) {
+        if (mse > dinamic_threshold) {
+          anomaly_counter++;
+        }
+        checking_counter--;
+
+        if (anomaly_counter > WINDOW_SIZE / 2) {
+          return true;
+        }
+
       } else {
-        return false;
+        checking = false;
       }
     }
   }
   return false;
+}
+
+int timer_calibration = 20;
+
+void print_data() {
+  if (runEvery(200)) {
+    float gx = (readGiroData(0x22) * 0.070) - offset_x;
+    float gz = (readGiroData(0x26) * 0.070) - offset_z;
+
+    Serial.print(millis()); // Timestamp
+    Serial.print(",");
+    Serial.print(gx, 3); // 3 cifre decimali
+    Serial.print(",");
+    Serial.println(gz, 3);
+
+    if (timer_calibration > 0)
+      timer_calibration--;
+    // else
+    // calibration_on = false;
+  }
 }
