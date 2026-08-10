@@ -79,6 +79,8 @@ static uint32_t deviceId = NODE;
 static uint16_t seqCounter = 0;
 
 MeshPacket relayPacket;
+MeshPacket out;
+MeshPacket p;
 volatile bool shouldRelay = false;
 uint32_t relayTime = 0;
 
@@ -112,6 +114,7 @@ void sendPacket(const MeshPacket &packet) {
   Serial.print("Airtime: ");
   Serial.print(airtime / 1000.0);
   Serial.println("ms");
+  Serial.println("--------------------------------");
 #endif
 
   lora->receive();
@@ -155,7 +158,7 @@ void cancelForward(const MeshPacket &p) {
 
 void sendAlert() {
 
-  MeshPacket p = {};
+  p = {};
 
   p.deviceId = deviceId;
 
@@ -177,7 +180,7 @@ void sendAlert() {
   // memcpy(p.payload, test_payload, sizeof(test_payload));
 
   if (ret) {
-    Serial.println("CRYPTO OK");
+    // Serial.println("CRYPTO OK");
 
   } else {
     Serial.println("ERROR CRYPTO");
@@ -207,7 +210,6 @@ void onLoRaReceive(int packetSize) {
     return;
   }
 
-  MeshPacket p;
 
   uint8_t *raw = (uint8_t *)&p;
 
@@ -216,7 +218,7 @@ void onLoRaReceive(int packetSize) {
 
   if (!aesCtrDecryptPacket(p)) {
 
-    Serial.println("CTR DECRYPT FAILED");
+    // Serial.println("CTR DECRYPT FAILED");
 
     digitalWrite(LED_RED, HIGH);
 
@@ -225,7 +227,7 @@ void onLoRaReceive(int packetSize) {
     return;
   }
 
-  Serial.println("CTR DECRYPT OK");
+  // Serial.println("CTR DECRYPT OK");
 
 #ifdef DEBUG
   int rssi = lora->packetRssi();
@@ -297,7 +299,7 @@ void onLoRaReceive(int packetSize) {
     Serial.println();
   }
 
-  Serial.println("--------------------------------");
+  // Serial.println("--------------------------------");
 
 #ifdef DEBUG
   if (updateMetricDuplicate(p.originId, p.seq, rxTimestamp)) {
@@ -327,10 +329,11 @@ void onLoRaReceive(int packetSize) {
 #ifdef DEBUG
   saveFirstReception(p.originId, p.seq, rxTimestamp, rssi, snr);
 #endif
-  relayTime = millis() + random(50, 150);
+
+  relayTime = millis() + random(100, 500);
 #ifdef DEBUG
   Serial.print("RelayTime: ");
-  Serial.print(relayTime);
+  Serial.print(relayTime - millis());
   Serial.println(" ms");
 #endif
   shouldRelay = true;
@@ -359,13 +362,17 @@ void handleLoRaRelay() {
     return;
   }
 
-  MeshPacket out = relayPacket;
-
+  out = relayPacket;
   out.ttl--;
 
   out.deviceId = deviceId;
 
   addSeen(out.originId, out.seq);
+
+  if (!aesCtrEncryptPacket(out)) {
+    // Serial.println("Relay CTR encrypt failed");
+    return;
+  }
 
   sendPacket(out);
 }

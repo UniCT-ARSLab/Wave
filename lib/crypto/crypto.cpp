@@ -1,8 +1,8 @@
 #include <crypto.h>
 
-#include <mesh_packet.h>
 #include "mbedtls/aes.h"
 #include "mbedtls/gcm.h"
+#include <mesh_packet.h>
 
 #include <string.h>
 
@@ -31,11 +31,10 @@ void buildGcmIv(uint32_t originId, uint32_t seq, uint8_t iv[GCM_IV_SIZE]) {
   memset(iv + 8, 0, 4);
 }
 
-static void buildAad(uint32_t originId, uint32_t seq, uint8_t ttl,
-                     uint8_t aad[9]) {
+static void buildAad(uint32_t originId, uint32_t seq, uint8_t aad[9]) {
   memcpy(aad, &originId, 4);
   memcpy(aad + 4, &seq, 4);
-  aad[8] = ttl;
+  aad[8] = 1;
 }
 
 bool aesGcmEncrypt(const uint8_t key[AES_KEY_SIZE],
@@ -51,7 +50,7 @@ bool aesGcmEncrypt(const uint8_t key[AES_KEY_SIZE],
   uint8_t aad[9];
 
   buildGcmIv(originId, seq, iv);
-  buildAad(originId, seq, ttl, aad);
+  buildAad(originId, seq, aad);
 
   mbedtls_gcm_context ctx;
 
@@ -95,7 +94,7 @@ bool aesGcmDecrypt(const uint8_t key[AES_KEY_SIZE],
   uint8_t aad[9];
 
   buildGcmIv(originId, seq, iv);
-  buildAad(originId, seq, ttl, aad);
+  buildAad(originId, seq, aad);
 
   mbedtls_gcm_context ctx;
 
