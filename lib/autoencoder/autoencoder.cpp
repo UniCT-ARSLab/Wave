@@ -166,9 +166,11 @@ bool is_there_anomaly(bool calibration) {
     if (quiet_direction < 0)
       quiet_direction += 360.0; // Assicurati che sia positivo
 
+#ifdef DATA
     displayPrintln("GYRO_X: " + String(gx) + " dps" +
                    "\nGYRO_Z: " + String(gz) + " dps" +
                    "\nMAG_DIR: " + String(quiet_direction) + " deg");
+#endif
 
     for (int i = 0; i < TF_NUM_INPUTS - 2; i++)
       input_buffer[i] = input_buffer[i + 2];
@@ -182,9 +184,11 @@ bool is_there_anomaly(bool calibration) {
       digitalWrite(LED_YELLOW, LOW);
       mse = runInference(input_buffer, output_buffer);
 
+#ifdef DATA
       displayAppend("MSE: " + String(mse, 6) +
                     "\nTHRESHOLD: " + String(dinamic_threshold, 6) + "\n" +
                     (mse > dinamic_threshold ? " (ANOMALY)" : " (NORMAL)"));
+#endif
 
       ema_mse = (ALPHA * mse) + ((1.0 - ALPHA) * ema_mse);
       dinamic_threshold = ema_mse * THRESHOLD_MULTIPLIER;
