@@ -2,6 +2,7 @@
 #include <iot_board.h>
 #include <lora.h>
 #include <state.h>
+#include <synctms.h>
 
 BoatState state;
 extern int counter;
@@ -34,6 +35,7 @@ void updateState() {
     digitalWrite(LED_RED, LOW);
     counter = 0;
 
+    // timeSync();
     break;
 
   case BoatState::Armed:

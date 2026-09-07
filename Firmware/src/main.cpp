@@ -4,7 +4,7 @@
 #include <lora.h>
 #include <menu.h>
 #include <state.h>
-
+#include <synctms.h>
 void onBtn1Released(uint8_t pinBtn) { menuNext(); }
 
 void onBtn2Released(uint8_t pinBtn) { menuSelect(); }
@@ -35,6 +35,9 @@ void setup() {
       ;
   }
 
+  if (!timeInit()) {
+    Serial.println("Time initialization failed");
+  }
   init_autoencoder();
 
   initMenu();

@@ -1,7 +1,7 @@
 #pragma once
 #include <cstdint>
 
-#define NODE 1
+#define NODE 2
 // #define DATA 1
 
 typedef enum { Idle, Armed, Alarm } BoatState;

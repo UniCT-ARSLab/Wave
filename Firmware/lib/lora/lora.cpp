@@ -6,7 +6,7 @@
 #include <lora.h>
 #include <mesh_packet.h>
 #include <state.h>
-
+#include <synctms.h>
 #define CACHE_SIZE 32
 
 #define DEBUG 1
@@ -53,17 +53,6 @@ void sendPacket(const MeshPacket &packet) {
     lora->write(raw[i]);
 
   lora->endPacket();
-
-#ifdef DEBUG
-  // FIXME:THIS IS WRONG
-  uint32_t txEnd = micros();
-  uint32_t airtime = txEnd - txStart;
-  Serial.print("Airtime: ");
-  Serial.print(airtime / 1000.0);
-  Serial.println("ms");
-  Serial.println("--------------------------------");
-#endif
-
   lora->receive();
 
   digitalWrite(LED_YELLOW, HIGH);
@@ -115,8 +104,20 @@ void sendAlert() {
 
   p.ttl = DEFAULT_TTL;
 
-  uint8_t test_payload[8] = {10, 20, 30, 40, 50, 60, 70, 80};
+  uint8_t test_payload[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 
+  uint64_t txTimestamp = gettime();
+
+  memcpy(test_payload, &txTimestamp, sizeof(txTimestamp));
+
+  Serial.print("TX timestamp BEFORE GCM: ");
+  Serial.println(txTimestamp);
+
+  Serial.print("Payload plaintext: ");
+
+  for (int i = 0; i < 8; i++) {
+    Serial.printf("%02X ", test_payload[i]);
+  }
   bool ret = aesGcmEncrypt(test_key, p.originId, p.seq, p.ttl,
                            test_payload,         // Cosa voglio cifrare
                            sizeof(test_payload), // Quanti byte (8)
@@ -124,11 +125,8 @@ void sendAlert() {
                            p.tag                 // DOVE scrivere il Tag
   );
 
-  // memcpy(p.payload, test_payload, sizeof(test_payload));
-
   if (ret) {
     // Serial.println("CRYPTO OK");
-
   } else {
     Serial.println("ERROR CRYPTO");
   }
@@ -221,6 +219,7 @@ void onLoRaReceive(int packetSize) {
   }
   Serial.println();
   uint8_t plain[8];
+
   int ret = aesGcmDecrypt(test_key,
 
                           p.originId, p.seq, p.ttl,
@@ -231,6 +230,21 @@ void onLoRaReceive(int packetSize) {
 
                           plain);
   if (ret) {
+    uint64_t txTimestamp;
+    memcpy(&txTimestamp, plain, sizeof(txTimestamp));
+    uint64_t rxTimestamp = gettime();
+    uint64_t latency = (uint64_t)rxTimestamp - (uint64_t)txTimestamp;
+
+    // Serial.print("TX timestamp: ");
+    // Serial.println(txTimestamp);
+    //
+    // Serial.print("RX timestamp: ");
+    // Serial.println(rxTimestamp);
+    //
+    Serial.print("Latency: ");
+    Serial.print((double)latency / 1000.0);
+    Serial.println("ms");
+
     Serial.print("Decrypted payload: ");
     for (int i = 0; i < sizeof(plain); i++) {
       Serial.print(plain[i]);
