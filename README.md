@@ -46,12 +46,17 @@ If you would like to train your own, follow these steps:
 If you use this code, data, or architecture in your research, please cite our paper:
 
 ```bibtex
-@article{,
-  title={Securing Marine Assets: Edge ML and LoRa Mesh Integration for IoT Anti-Theft Systems},
-  author={},
-  journal={},
-  year={2026},
-  volume={XX},
-  pages={XXX-XXX},
-  doi={10.XXXX/XXXX}
+
+@Article{iot7030079,
+AUTHOR = {Coppola, Damiano Vincenzo and Russo, Miriana and Santoro, Corrado and Santoro, Federico Fausto and Spadola, Angelo and Tudisco, Alessio},
+TITLE = {Securing Marine Assets: Edge ML and LoRa Mesh Integration for IoT Anti-Theft Systems},
+JOURNAL = {IoT},
+VOLUME = {7},
+YEAR = {2026},
+NUMBER = {3},
+ARTICLE-NUMBER = {79},
+URL = {https://www.mdpi.com/2624-831X/7/3/79},
+ISSN = {2624-831X},
+ABSTRACT = {This paper presents a maritime Internet of Things anti-theft architecture based on an ESP32 onboard node, local motion analysis, and LoRa mesh communication. The proposed detection pipeline uses a one-dimensional convolutional autoencoder trained on stationary vessel data and applied to sliding windows of X- and Z-axis angular velocity measurements. During deployment, a calibration phase estimates the reconstruction-error threshold from the local motion profile of the moored vessel, reducing the dependence on labelled theft examples. The communication layer combines an Elliptic Curve Cryptography setup phase with symmetric payload encryption for alert packets, while ESP32 hardware security features are used to protect firmware and stored credentials. The mesh network uses controlled flooding. A Godot-based simulation environment was used to generate stationary and towing scenarios under different wave configurations. In the current simulation campaign, towing windows produced a higher mean reconstruction error than stationary windows. The results support the feasibility of the architecture and also show that event-level alert logic is required to aggregate window-level anomaly scores into reliable alarms.},
+DOI = {10.3390/iot7030079}
 }
